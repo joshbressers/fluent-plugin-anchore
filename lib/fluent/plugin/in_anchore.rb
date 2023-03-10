@@ -25,6 +25,7 @@ module Fluent
 
       config_param :tag, :string, :default => "anchore"
       config_param :sbomtag, :string, :default => "anchore-sbom"
+      config_param :vulntag, :string, :default => "anchore-vulns"
       config_param :url, :string, :default => nil
       config_param :username, :string, :default => nil
       config_param :password, :string, :default => nil, :secret => true
@@ -81,6 +82,17 @@ module Fluent
                   end
                   sbom_content = JSON.parse(sbom_content)
                   router.emit(@sbomtag, Time.now.to_i, sbom_content)
+
+                  response = URI.open("http://enterprise-dev:8080/v1/images/%s/vuln/all" % [digest], :http_basic_authentication => ["admin", "foobar"])
+
+                  vuln_content = ""
+                  if response.content_type == "application/gzip"
+                    vuln_content = Zlib::GzipReader.new(response).read
+                  else
+                    vuln_content = response.read
+                  end
+                  vuln_content = JSON.parse(vuln_content)
+                  router.emit(@vulntag, Time.now.to_i, vuln_content)
 
                 end
               end

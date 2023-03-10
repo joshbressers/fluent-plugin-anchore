@@ -86,6 +86,19 @@ Example configuration
     index_name fluentd-sbom #(optional; default=fluentd)
     type_name fluentd-sbom #(optional; default=fluentd)
 </match>
+
+<match anchore-vulns>
+    @type elasticsearch
+#    logstash_format true
+    host elasticsearch #(optional; default="localhost")
+    port 9200 #(optional; default=9200)
+    user elastic
+    password secret
+    scheme https
+    ca_file /some/path.ca
+    index_name fluentd-vulns #(optional; default=fluentd)
+    type_name fluentd-vulns #(optional; default=fluentd)
+</match>
 ```
 
 ## Copyright
