@@ -24,10 +24,11 @@ module Fluent
       Fluent::Plugin.register_input("anchore", self)
 
       config_param :tag, :string, :default => "anchore"
+      config_param :sbomtag, :string, :default => "anchore-sbom"
       config_param :url, :string, :default => nil
       config_param :username, :string, :default => nil
       config_param :password, :string, :default => nil, :secret => true
-
+      config_param :headers, :hash, :default => nil, :secret => true
 
       def configure(conf)
         super
@@ -63,6 +64,28 @@ module Fluent
             # Write x to the output
             log.debug("Writing %s" % [x])
             router.emit(@tag, Time.now.to_i, x)
+
+
+            if x["event"]["details"].key?("curr_eval")
+              if x["event"]["details"]["curr_eval"].key?("analysis_status")
+                if x["event"]["details"]["curr_eval"]["analysis_status"] == "analyzed"
+
+                  digest = x["event"]["details"]["curr_eval"]["imageDigest"]
+                  response = URI.open("http://enterprise-dev:8080/v1/images/%s/sboms/native" % [digest], :http_basic_authentication => ["admin", "foobar"])
+
+                  sbom_content = ""
+                  if response.content_type == "application/gzip"
+                    sbom_content = Zlib::GzipReader.new(response).read
+                  else
+                    sbom_content = response.read
+                  end
+                  sbom_content = JSON.parse(sbom_content)
+                  router.emit(@sbomtag, Time.now.to_i, sbom_content)
+
+                end
+              end
+            end
+
           }
 
           last_run = time1 = Time.now.utc.strftime('%FT%TZ')
